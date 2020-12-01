@@ -29,6 +29,10 @@ void setArray(int s[], int n){
 	int i = TAM;
 	while(i) s[--i] = 0;
 }
+void copyArray(int s[], int p[]){
+	int i = TAM;
+	while(i) i--, s[i] = p[i];
+}
 
 void showArray(int s[],int n){ //exibe a senha no display (teste)
 	int i;
@@ -39,10 +43,69 @@ void showArray(int s[],int n){ //exibe a senha no display (teste)
 	nokia_lcd_render(); //atualiza o display
 }
 
+int getPassWord(int senha[], char msn[]){
+	int i = 0, nr;
+	nokia_lcd_clear();
+	nokia_lcd_set_cursor(0,0);
+	nokia_lcd_write_string(msn,1);
+	nokia_lcd_render();
+	
+	while(i<TAM){
+		nr = KP_GetKey(); //lê constantemente o teclado
+		KP_WaitRelease(); // espera a tecla ser solta
+	
+		if(nr != Key_None && nr != 'E' && nr != 'F')
+		{
+			senha[i] = (int)(nr-0x30); // nr(hexa) to nr(int)
+            nokia_lcd_set_cursor(i*6,10);
+			nokia_lcd_write_char('+',1);
+			nokia_lcd_render();
+			i++;
+		}
+		if(nr == 'E' || nr == 'F')
+			return 0;
+	}
+	return 1;
+}
+
+int verifPassWord(int senha[], int pass[]){
+	int ret;
+	nokia_lcd_clear();
+	
+	ret = compArray(senha,pass);
+	if(ret == 1){
+		nokia_lcd_set_cursor(0,16);
+		nokia_lcd_write_string("allowed",2); //escreve no buffer do LCD
+	}
+	else{
+		nokia_lcd_set_cursor(0,16);
+		nokia_lcd_write_string("denied ",2); //escreve no buffer do LCD
+	}
+	nokia_lcd_render();
+	
+	setArray(senha,0); //inicializa a senha
+	return ret;
+}
+
+int changePassWord(int curr[]){
+	int new[TAM];
+	if(getPassWord(new, "Senha atual: ")&& verifPassWord(new, curr)){
+		if(getPassWord(new, "Nova senha: ")){
+			copyArray(curr,new);
+			nokia_lcd_clear();
+			nokia_lcd_set_cursor(0,20);
+			nokia_lcd_write_string("changed",2);
+			nokia_lcd_render();
+		}
+	}
+	else return 0;
+	return 1;
+}
+
 int main(void)
 {
 	unsigned char nr;
-	int senha[TAM] = {0,0,0,0,0,0}, i = 0;
+	int senha[TAM] = {0,0,0,0,0,0};
 
 	DDRB = 0xFF; //porta B como saída
 
@@ -52,29 +115,32 @@ int main(void)
 
     while(1)
     {	
-		//####### obtem a senha ###############
+		nokia_lcd_clear();
+		nokia_lcd_set_cursor(2.5*6,0);
+		nokia_lcd_write_string("Bem vindo",1);
+		nokia_lcd_set_cursor(0.5*6,10);
+		nokia_lcd_write_string("Digite * ou #",1);
+		nokia_lcd_render();
+		
 		nr = KP_GetKey(); //lê constantemente o teclado
 		KP_WaitRelease(); // espera a tecla ser solta
-			
-	    if(nr!= Key_None)
-		{
-			senha[i] = (int)(nr-0x30); // nr(hexa) to nr(int)
-			showArray(senha,i+1);
-			i++;
-	    }
-		//###################################
 		
-		//####### Verifica a senha #########
-		if(i == TAM)
-		{
-			nokia_lcd_set_cursor(0,0);
-			if(compArray(senha,pass) == 1)
-				nokia_lcd_write_string("pass correta  ",1);//escreve no buffer do LCD
-			else nokia_lcd_write_string("pass incorreta",1);//escreve no buffer do LCD
-			nokia_lcd_render();
-			setArray(senha,0); //inicializa a senha
-			i = 0;
-		}
-		//###################
+	    if(nr != Key_None)
+		{	
+			if(nr == 'E'){// 'E' equivale a '*'
+				
+				if(getPassWord(senha,"Senha: ")){ //tenta obter a senha
+					if(verifPassWord(senha,pass))//verifica se a senha está correta
+						;//DESTRAVA A PORTA
+					_delay_ms(3000);
+					}
+			}
+			else if(nr == 'F'){ // 'F' equivale a '#'
+				changePassWord(pass);
+				_delay_ms(3000);
+				//while ((nr = KP_KeyPressed()) == Key_None); //Espera alguma tecla ser informada
+			}
+	
+	    }
 	}
 }

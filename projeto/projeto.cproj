@@ -133,9 +133,6 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="def_principais.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="IO_Macros.h">
       <SubType>compile</SubType>
     </Compile>
@@ -158,12 +155,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="nokia5110_chars.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="teclado.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="teclado.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
