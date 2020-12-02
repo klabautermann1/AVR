@@ -16,7 +16,8 @@
 #include "nokia5110.h"
 
 #define TAM 6
-int pass[TAM] = {1,2,3,4,5,6};
+int pass[TAM] = {1,2,3,4,5,6}; //senha de fábrica
+int enabled = 1; //flag de ativação do teclado matricial
 
 int compArray(int s[], int p[]){
 	int j = 0, ret =0;
@@ -89,7 +90,7 @@ int verifPassWord(int senha[], int pass[]){
 
 int changePassWord(int curr[]){
 	int new[TAM];
-	if(getPassWord(new, "Senha atual: ")&& compArray(new, curr)){
+	if(getPassWord(new, "Senha atual: ") && compArray(new, curr)){
 		if(getPassWord(new, "Nova senha: ")){
 			copyArray(curr,new);
 			nokia_lcd_clear();
@@ -120,15 +121,24 @@ unsigned char EEPROM_read(unsigned int uiEndereco)
 	EECR |= (1<<EERE); //inicia a leitura ativando EERE
 	return EEDR; //retorna o valor lido do registrador de dados
 }
-
+ISR(INT0_vect){
+	enabled = !enabled;
+}
 int main(void)
 {
 	unsigned char nr;
 	int senha[TAM] = {0,0,0,0,0,0}, i;
 
+	//GPIO
 	DDRB = 0xFF; //porta B como saída
+	DDRD &= ~(1<<2); //pino PD2 como entrada
+	PORTD |= 1<<2; //habiida resistor de pull-up do pino PD2
 	
-	sei();
+	//Interrup??es
+	EICRA = 0b00000011; //configura para interrup??o na borta de subida para ambas INT1 e INT0;
+	EIMSK = 0b00000001; //habilita ambas INT1 e INT0
+	sei(); // habilita interrupções globais
+	
 	KP_Setup();
 	nokia_lcd_init(); //inicia o LCD
 	
@@ -145,12 +155,17 @@ int main(void)
 		nokia_lcd_write_string("Bem vindo",1);
 		nokia_lcd_set_cursor(0.5*6,10);
 		nokia_lcd_write_string("Digite * ou #",1);
+		if(!enabled){
+			nokia_lcd_set_cursor(7*6,40);
+			nokia_lcd_write_string("unabled",1);
+		}
+		
 		nokia_lcd_render();
 		
 		nr = KP_GetKey(); //lê constantemente o teclado
 		KP_WaitRelease(); // espera a tecla ser solta
 		
-	    if(nr != Key_None)
+	    if(nr != Key_None && enabled)
 		{	
 			if(nr == 'E'){// 'E' equivale a '*'
 				
