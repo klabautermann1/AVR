@@ -89,7 +89,7 @@ int verifPassWord(int senha[], int pass[]){
 
 int changePassWord(int curr[]){
 	int new[TAM];
-	if(getPassWord(new, "Senha atual: ")&& verifPassWord(new, curr)){
+	if(getPassWord(new, "Senha atual: ")&& compArray(new, curr)){
 		if(getPassWord(new, "Nova senha: ")){
 			copyArray(curr,new);
 			nokia_lcd_clear();
@@ -102,16 +102,41 @@ int changePassWord(int curr[]){
 	return 1;
 }
 
+///#######
+
+void EEPROM_write(unsigned int uiEndereco, unsigned char ucDado)
+{
+	while(EECR & (1<<EEPE));//espera completar um escrita prévia
+	EEAR = uiEndereco;//carrega o endereço para a escrita
+	EEDR = ucDado;//carrega o dado a ser escrito
+	EECR |= (1<<EEMPE);//escreve um lógico em EEMPE
+	EECR |= (1<<EEPE);//inicia a escrita ativando EEPE
+}
+
+unsigned char EEPROM_read(unsigned int uiEndereco)
+{
+	while(EECR & (1<<EEPE)); //espera completar um escrita prévia
+	EEAR = uiEndereco; //escreve o endereço de leitura
+	EECR |= (1<<EERE); //inicia a leitura ativando EERE
+	return EEDR; //retorna o valor lido do registrador de dados
+}
+
 int main(void)
 {
 	unsigned char nr;
-	int senha[TAM] = {0,0,0,0,0,0};
+	int senha[TAM] = {0,0,0,0,0,0}, i;
 
 	DDRB = 0xFF; //porta B como saída
-
+	
 	sei();
 	KP_Setup();
 	nokia_lcd_init(); //inicia o LCD
+	
+	//ler senha salva na eeprom
+	if(EEPROM_read(0x00) == 1){ //Digito verificador se for lido 1 significa que algo está salvo na eeprom, 0 significa que nada foi salvo ainda
+		for(i=0;i<TAM;i++)
+			pass[i] = EEPROM_read(i+1);
+	}
 
     while(1)
     {	
@@ -132,13 +157,16 @@ int main(void)
 				if(getPassWord(senha,"Senha: ")){ //tenta obter a senha
 					if(verifPassWord(senha,pass))//verifica se a senha está correta
 						;//DESTRAVA A PORTA
-					_delay_ms(3000);
+					_delay_ms(2000);
 					}
 			}
 			else if(nr == 'F'){ // 'F' equivale a '#'
 				changePassWord(pass);
-				_delay_ms(3000);
-				//while ((nr = KP_KeyPressed()) == Key_None); //Espera alguma tecla ser informada
+				//salva nova senha na eeprom
+				EEPROM_write(0, 1); //escreve digito para informar que algo foi escrito na eeprom
+				for(i=0;i<TAM;i++)
+					EEPROM_write(i+1, pass[i]);
+				_delay_ms(2000);
 			}
 	
 	    }
